@@ -175,11 +175,23 @@ header h1 span{color:var(--accent)}
     <div class="tab active" id="tab-list" onclick="switchTab('list')">Lista <span class="count-badge" id="count-badge">0</span></div>
     <div class="tab" id="tab-map-tab" onclick="switchTab('map')">Mapa</div>
   </div>
-  <div class="source-bar" id="source-bar">
-    <button class="src-pill src-pill-all active" id="src-all" onclick="filterSource('all')">Todas <span class="src-count" id="sc-all">0</span></button>
-    <button class="src-pill src-pill-windy" id="src-windy" onclick="filterSource('windy')" style="display:none">🌬️ Windy <span class="src-count" id="sc-windy">0</span></button>
-    <button class="src-pill src-pill-osm"   id="src-osm"   onclick="filterSource('osm')"   style="display:none">🗺️ OSM <span class="src-count" id="sc-osm">0</span></button>
-    <button class="src-pill src-pill-dgt"   id="src-dgt"   onclick="filterSource('dgt')"   style="display:none">🚗 DGT <span class="src-count" id="sc-dgt">0</span></button>
+  <div id="source-bar" style="display:flex;background:var(--bg2);border-bottom:1px solid var(--border)">
+    <button onclick="filterSource('all')" id="src-all" style="flex:1;padding:8px 4px;border:none;background:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--accent);border-bottom:2px solid var(--accent);display:flex;flex-direction:column;align-items:center;gap:1px">
+      <span id="sc-all" style="font-size:16px;font-weight:800">—</span>
+      <span>Todas</span>
+    </button>
+    <button onclick="filterSource('windy')" id="src-windy" style="flex:1;padding:8px 4px;border:none;background:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+      <span id="sc-windy" style="font-size:16px;font-weight:800">—</span>
+      <span>🌬️ Windy</span>
+    </button>
+    <button onclick="filterSource('dgt')" id="src-dgt" style="flex:1;padding:8px 4px;border:none;background:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+      <span id="sc-dgt" style="font-size:16px;font-weight:800">—</span>
+      <span>🚗 DGT</span>
+    </button>
+    <button onclick="filterSource('osm')" id="src-osm" style="flex:1;padding:8px 4px;border:none;background:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px">
+      <span id="sc-osm" style="font-size:16px;font-weight:800">—</span>
+      <span>🗺️ OSM</span>
+    </button>
   </div>
 </div>
 
@@ -260,9 +272,9 @@ let _dgtCache     = null;
 
 // ── Source config ──────────────────────────────────
 const SOURCES = {
-  windy: { label: 'Windy',          badge: '🌬️ Windy',        cls: 'src-badge-windy', bg: '#0077ff', fgDark: false },
-  osm:   { label: 'OpenStreetMap',  badge: '🗺️ OSM',          cls: 'src-badge-osm',   bg: '#66bb3f', fgDark: true  },
-  dgt:   { label: 'DGT España',     badge: '🚗 DGT',          cls: 'src-badge-dgt',   bg: '#e8321a', fgDark: false },
+  windy: { label: 'Windy',         badge: 'Windy', cls: 'src-badge-windy', bg: '#0077ff', fgDark: false },
+  osm:   { label: 'OSM',           badge: 'OSM',   cls: 'src-badge-osm',   bg: '#66bb3f', fgDark: true  },
+  dgt:   { label: 'DGT',           badge: 'DGT',   cls: 'src-badge-dgt',   bg: '#e8321a', fgDark: false },
 };
 
 // ── Init ──────────────────────────────────────────
@@ -316,26 +328,37 @@ function quickSearch(q) { document.getElementById('search-input').value = q; doS
 // ══════════════════════════════════════════════════════
 function filterSource(src) {
   activeSource = src;
-  document.querySelectorAll('.src-pill').forEach(p => p.classList.remove('active'));
-  document.getElementById('src-' + src)?.classList.add('active');
-  filteredCams = src === 'all' ? allWebcams : allWebcams.filter(w => w._source === src);
+  // Actualizar estilo de botones de fuente
+  var sources = ['all','windy','dgt','osm'];
+  for (var i=0; i<sources.length; i++) {
+    var btn = document.getElementById('src-' + sources[i]);
+    if (!btn) continue;
+    if (sources[i] === src) {
+      btn.style.color = 'var(--accent)';
+      btn.style.borderBottom = '2px solid var(--accent)';
+    } else {
+      btn.style.color = 'var(--muted)';
+      btn.style.borderBottom = '2px solid transparent';
+    }
+  }
+  filteredCams = src === 'all' ? allWebcams : allWebcams.filter(function(w){ return w._source === src; });
   renderList(filteredCams);
   document.getElementById('count-badge').textContent = filteredCams.length;
   if (currentView === 'map' && leafletMap) { plotMarkers(); }
 }
 
 function updateSourceCounts(cams) {
-  const counts = { all: cams.length, windy: 0, osm: 0, dgt: 0 };
-  cams.forEach(w => { if (counts[w._source] !== undefined) counts[w._source]++; });
-  ['all','windy','osm','dgt'].forEach(s => {
-    const el = document.getElementById('sc-' + s);
-    if (el) el.textContent = counts[s];
-    // Mostrar/ocultar píldoras según si hay resultados
-    if (s !== 'all') {
-      const pill = document.getElementById('src-' + s);
-      if (pill) pill.style.display = counts[s] > 0 ? 'flex' : 'none';
-    }
-  });
+  var counts = { all: cams.length, windy: 0, osm: 0, dgt: 0 };
+  for (var i=0; i<cams.length; i++) {
+    var s = cams[i]._source;
+    if (counts[s] !== undefined) counts[s]++;
+  }
+  var sources = ['all','windy','dgt','osm'];
+  for (var j=0; j<sources.length; j++) {
+    var s2 = sources[j];
+    var el = document.getElementById('sc-' + s2);
+    if (el) el.textContent = counts[s2];
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -442,6 +465,7 @@ async function doSearch() {
     renderList(all);
     document.getElementById('count-badge').textContent = all.length;
     document.getElementById('tabs-wrap').style.display = 'block';
+    document.getElementById('source-bar').style.display = 'flex';
 
     if (currentView === 'map') { if (!leafletMap) initMap(); setTimeout(() => { leafletMap.invalidateSize(); plotMarkers(); }, 100); }
 
@@ -648,13 +672,7 @@ function normalizeV2(cams) {
 async function fetchOSMWebcams(lat, lon, radiusKm) {
   const radiusM = radiusKm * 1000;
   // Buscar nodos OSM con webcam pública (contact:webcam o website con "cam")
-  const query = `[out:json][timeout:25];
-(
-  node["contact:webcam"](around:${radiusM},${lat},${lon});
-  node["webcam"](around:${radiusM},${lat},${lon});
-  node["man_made"="surveillance"]["contact:webcam"](around:${radiusM},${lat},${lon});
-);
-out body;`;
+  var query = '[out:json][timeout:25];node["contact:webcam"](around:' + radiusM + ',' + lat + ',' + lon + ');out body;';
 
   // Intentar POST primero, fallback a GET si falla
   let osmRes;
@@ -936,8 +954,16 @@ function openModal(w) {
     tlBar.classList.add('hidden'); intervalSec.style.display = 'none';
   }
 
-  document.getElementById('modal').classList.add('open');
-  // NO usar history.pushState — rompe el WebView de WebIntoApp
+  var m = document.getElementById('modal');
+  m.style.display = 'flex';
+  m.style.position = 'fixed';
+  m.style.top = '0';
+  m.style.left = '0';
+  m.style.right = '0';
+  m.style.bottom = '0';
+  m.style.zIndex = '9999';
+  m.style.flexDirection = 'column';
+  m.style.background = 'rgba(0,0,0,0.97)';
 }
 
 function startTimelapse() {
@@ -993,7 +1019,7 @@ function onImgError() {}
 
 function closeModal() {
   stopTimelapse();
-  document.getElementById('modal').classList.remove('open');
+  document.getElementById('modal').style.display = 'none';
   document.getElementById('timelapse-img').src = '';
   document.getElementById('viewer-placeholder').style.display = 'block';
   document.getElementById('viewer-placeholder').textContent = '📷 Cargando…';
@@ -1009,6 +1035,22 @@ window.addEventListener('popstate', () => {
     closeModal();
   }
 });
+
+// Exponer funciones globalmente para onclick inline en WebView Android
+window.openModal          = openModal;
+window.closeModal         = closeModal;
+window.filterSource       = filterSource;
+window.updateSourceCounts = updateSourceCounts;
+window.saveKey            = saveKey;
+window.testKey            = testKey;
+window.doSearch           = doSearch;
+window.updateRadius       = updateRadius;
+window.quickSearch        = quickSearch;
+window.switchTab          = switchTab;
+window.refreshNow         = refreshNow;
+window.setInterval_       = setInterval_;
+window.onImgLoad          = onImgLoad;
+window.onImgError         = onImgError;
 
 // ── Utils ─────────────────────────────────────────
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
